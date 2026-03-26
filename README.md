@@ -1,65 +1,74 @@
-# Yapay Zeka Destekli İşletme Asistanı (Generic AI Agent)
+# AI-Powered Business Assistant (Generic AI Agent)
 
-Bu proje, herhangi bir işletmenin (restoran, klinik, kuaför, danışmanlık vb.) kendi PDF dokümanlarını okuyarak kurallarını otomatik olarak öğrenen ve bu kurallar çerçevesinde müşterilerle doğal dilde yazışıp **sipariş alan** ve **randevu oluşturan** yapay zeka tabanlı bir asistandır.
+This project is an AI-powered assistant designed to help any type of business (restaurants, clinics, salons, consulting services, etc.) automatically learn its operational rules from PDF documents and interact with customers in natural language to take orders and schedule appointments.
 
-Proje, Google'ın gelişmiş Gemini altyapısı ve modern RAG (Retrieval-Augmented Generation) + LangGraph mimarisi kullanılarak geliştirilmiştir.
+The system is built using Google’s advanced Gemini infrastructure combined with modern RAG (Retrieval-Augmented Generation) and LangGraph-based orchestration.
 
-## 🚀 Öne Çıkan Özellikler
+## 🚀 Key Features
 
-- **İşletme Bağımsız Mimari (Generic):** Kodun içine gömülü (hardcoded) kural yoktur. İşletmenin tüm menüsü, vergi oranları, çalışma saatleri, randevu süreleri ve teslimat ücretleri gibi bilgiler yüklenen PDF'ten otomatik olarak çekilir (Gemini Information Extraction).
-- **Gelişmiş Hafıza ve Karar Alma (LangGraph):** Kullanıcının ne istediğini anlar (Sipariş mi? Randevu mu? Sadece soru mu?). Konuşma geçmişini (Session) hatırlar ve bağlama uygun cevaplar verir.
-- **Dinamik RAG Modülü:** Kullanıcı işletme hakkında bir şey sorduğunda doğrudan FAISS vektör veritabanında arama yaparak PDF içerisinden en doğru cevabı verir uydurma (hallucination) yapmaz.
-- **Hazır Araçlar (Tools):** Yapay zeka, eksik bilgi hissettiğinde sepeti güncelleyebilir, toplam tutarı hesaplayabilir ve veritabanına doğrudan kayıt atabilir.
-- **Taşınabilir Veritabanı:** Kurulumu kolaylaştırmak için arka planda yerleşik SQLite kullanılmaktadır (Bulut veritabanı gereksinimi yoktur).
+* **Business-Agnostic Architecture (Generic)**: No hardcoded rules exist in the system. All business data such as menus, tax rates, working hours, appointment durations, and delivery fees are automatically extracted from uploaded PDFs using Gemini-powered information extraction.
+* **Advanced Memory & Decision-Making (LangGraph)**: The assistant understands user intent (order, appointment, or general inquiry), maintains conversation context (session memory), and responds accordingly.
+* **Dynamic RAG Module**: When users ask questions about the business, the system retrieves accurate answers directly from the PDF using a FAISS vector database, minimizing hallucinations.
+* **Smart Inventory & Wait-Time Management**: Reads items from an inventory file/database. If an item is out of stock (e.g., only 2 pizzas left and the user asks for 5), the agent automatically calculates wait times and asks the user for confirmation.
+* **Dynamic Scheduling & Pre-set Calendars**: Checks against pre-set schedules, parses calendar files, identifies conflicts dynamically, and offers available time slots automatically.
+* **Built-in Tools**: The AI can update carts, calculate totals, reschedule arrays, and write directly to the database when needed.
+* **Portable Database**: Uses SQLite for simplicity and easy deployment, eliminating the need for a cloud database.
 
-## 🛠 Teknik Altyapı
-- **Backend Framekwork:** FastAPI (Python)
-- **AI/LLM:** Google Gemini (1.5 Flash) ve Gemini Embeddings
-- **Orkestrasyon & Chain:** LangChain ve LangGraph
-- **Vektör Veritabanı:** FAISS
-- **İlişkisel Veritabanı:** SQLite
-- **Loglama:** Structlog
+## 🛠 Tech Stack
 
-## 📦 Kurulum
+- **Backend Framework**: FastAPI (Python)
+- **AI/LLM**: Google Gemini (1.5 Flash) & Gemini Embeddings
+- **Orchestration**: LangChain & LangGraph
+- **Vector Database**: FAISS
+- **Relational Database**: SQLite
+- **Logging**: Structlog
 
-1. **Python Kurulumu:** 
-   Bilgisayarınızda Python (3.10 veya üzeri) kurulu olduğundan emin olun.
+## 📦 Installation
 
-2. **Bağımlılıkların Yüklenmesi:**
-   Proje dizininde terminali açın ve gerekli kütüphaneleri yükleyin:
+1. **Install Python**: Make sure Python `3.10` or higher is installed on your system.
+2. **Install Dependencies**: Run the following command in the project directory:
    ```bash
    pip install -r requirements.txt
    ```
+3. **Set API Key (Environment Variables)**:
+   - Open the `.env.example` or `.env` file in the root directory.
+   - Replace the `GOOGLE_API_KEY` value with your own Gemini API key.
+   - Example: `GOOGLE_API_KEY=AIzaSyA...`
 
-3. **API Anahtarı Ayarları (Environment Variables):**
-   - Proje ana dizininde bulunan `.env.example` veya `.env` dosyasını açın.
-   - `GOOGLE_API_KEY` yazan kısma kendi Google Gemini API anahtarınızı girin.
-   - Örnek kullanım: `GOOGLE_API_KEY=AIzaSyA...`
+## ⚙️ Running the System
 
-## ⚙️ Sistemi Çalıştırma
-
-Projeyi başlatmak oldukça basittir. Proje ana dizinindeyken oluşturulmuş olan batch dosyasını çalıştırabilirsiniz:
-
+You can start the system easily using:
 ```bash
 run_system.bat
 ```
-
-Veya doğrudan terminal üzerinden başlatmak için:
+Or directly via terminal:
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 5000
 ```
-Sistem çalışmaya başladığında API dokümantasyonuna tarayıcınızdan http://localhost:5000/docs adresinden ulaşabilirsiniz.
+Once running, you can access the API documentation at: `http://localhost:5000/docs`
 
-## 📚 Kullanım Senaryosu
+## 📚 Usage Workflow
 
-Sistem iki temel adımdan oluşur:
-1. **İşletmeyi Sisteme Tanıtma:** 
-   Her işletmenin kendi bilgilerini içeren PDF dokümanı sisteme `/business/load_pdf` endpoint'i üzerinden yüklenir.  Yükleme sırasında belge ayrıştırılır (chunking), vektörleştirilir (embedding) ve kuralları yapay zeka algoritmasıyla okunarak JSON formatında profile kaydedilir.
-2. **Sohbet (Chat):**
-   Sisteme işletme eklendikten sonra, `/agent/chat` endpoint'ine mesaj gönderilir (`session_id` ve `business_name` belirtilerek). Asistan, müşteri ne isterse işletmenin yeteneklerine göre yanıt verir ve işlemleri tamamlar.
+The system operates in three main steps:
 
-## 🔒 Güvenlik Uyarıları
-- **API Anahtarı Gizliliği:** Bu proje testlerden geçmiş olup Google API anahtarınız .env içerisine konumlandırılmıştır, gerçek sunucularda `.env` anahtarını güvende tutunuz. Kaynak kodlar direkt paylaşılırken anahtarın kaldırıldığından emin olunmuştur.
+### 1. Register a Business
+Upload a business-specific PDF via the `/business/load_pdf` endpoint. During upload, the document is chunked, converted into embeddings, stored in a FAISS vector database, and business rules are extracted and saved as structured JSON.
 
----
-**Telif ve Yapım:** Bu mimari, tamamen ölçeklenebilir ve satılabilir bir altyapı olarak tasarlanmıştır. Tüm hakları ve kod yapısı işletmeye entegre edilmek üzere özelleştirilebilir.
+### 2. Chat Interaction
+After setup, send messages to `/agent/chat` with `session_id` and `business_name`. The assistant will respond based on the business capabilities and complete actions such as answering questions, taking orders, or scheduling appointments.
+
+### 3. Testing Scenarios (Automated Pipeline)
+To test the system end-to-end exactly as a client would, a dedicated automated test script (`test_run.py`) has been provided. This script simulates an external calendar with preset appointments and loads inventory data to test:
+- **Inventory Shortage & Wait-Time prompts**: The AI asks the user if they'd like to wait if stock runs low.
+- **Appointment Conflicts, Rescheduling, and Cancellation flows**: The AI handles real-world scheduling hurdles directly.
+
+To run the full suite:
+```bash
+python test_run.py
+```
+
+## 🔒 Security Notes
+**API Key Protection:** Your Google API key is stored in the `.env` file. Ensure it is kept secure and never exposed in public repositories. Always remove sensitive data before sharing the source code.
+
+## 📄 License & Ownership
+This architecture is designed as a scalable and commercially viable solution. It can be customized and integrated into different businesses as a reusable AI infrastructure.

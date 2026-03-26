@@ -267,6 +267,7 @@ def add_item_to_order(
     unit_price: float,
     modifiers: str = "",
     notes: str = "",
+    accepted_wait_time: bool = False,
 ) -> str:
     """
     Sipariş taslağına bir ürün/hizmet ekler.
@@ -281,6 +282,7 @@ def add_item_to_order(
         unit_price: Birim fiyat (PDF'ten alınmış, vergisiz).
         modifiers: Virgülle ayrılmış seçenekler (örn: 'büyük,ekstra peynir').
         notes: Bu ürün için özel talimatlar.
+        accepted_wait_time: Müşteri stok yetersizliğinden doğan bekleme süresini kabul ettiyse True yapın.
     Returns:
         Güncellenmiş sipariş (vergi/teslimat henüz eklenmemiş) JSON olarak.
     """
@@ -292,6 +294,19 @@ def add_item_to_order(
         result = {"error": f"Order {order_id} not found"}
         _log_tool("add_item_to_order", locals(), result, int((time.time() - t0) * 1000))
         return json.dumps(result)
+        
+    inventory = db.check_inventory(_current_business_id, item_name)
+    if inventory and not accepted_wait_time:
+        if quantity > inventory["stock_quantity"]:
+            msg = f"We have only {inventory['stock_quantity']} pieces. " \
+                  f"Wait time for {quantity} is {inventory['wait_time_minutes']} minutes."
+            result = {
+                "error": "inventory_shortage",
+                "message": msg,
+                "instruction": f"Ask the customer specifically: 'Are you ready to wait for {inventory['wait_time_minutes']} minutes while we prep more?' If yes, call add_item_to_order again with accepted_wait_time=True."
+            }
+            _log_tool("add_item_to_order", locals(), result, int((time.time() - t0) * 1000))
+            return json.dumps(result)
 
     items = order.get("items") or []
     items.append({
@@ -791,7 +806,7 @@ def analyze_customer_profile(customer_name: str) -> str:
     t0 = time.time()
     try:
         conn = db.get_db()
-        cust = conn.execute("SELECT id FROM customers WHERE name ILIKE ? AND business_id = ?", (f"%{customer_name}%", _current_business_id)).fetchone()
+        cust = conn.execute("SELECT id FROM customers WHERE name LIKE ? AND business_id = ?", (f"%{customer_name}%", _current_business_id)).fetchone()
         if not cust:
             return json.dumps({"error": "Customer not found in history. Treat as new customer."})
             

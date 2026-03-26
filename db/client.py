@@ -141,6 +141,17 @@ def init_db():
             created_at   TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (session_id) REFERENCES sessions(id)
         )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS inventory (
+            id                 TEXT PRIMARY KEY,
+            business_id        TEXT,
+            item_name          TEXT,
+            stock_quantity     INTEGER DEFAULT 0,
+            wait_time_minutes  INTEGER DEFAULT 0,
+            updated_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (business_id) REFERENCES businesses(id)
+        )
         """
     ]
     
@@ -243,6 +254,48 @@ def upsert_customer(business_id: str, name: str = None, phone: str = None,
     row = conn.execute("SELECT * FROM customers WHERE id = ?", (cid,)).fetchone()
     conn.close()
     return _row_to_dict(row)
+
+# --------------------------------------------------------------------------- #
+#  Inventory
+# --------------------------------------------------------------------------- #
+
+def upsert_inventory(business_id: str, item_name: str, quantity: int, wait_time_minutes: int = 0) -> Dict:
+    conn = get_db()
+    existing = conn.execute("SELECT * FROM inventory WHERE item_name = ? AND business_id = ?", (item_name, business_id)).fetchone()
+    
+    if existing:
+        iid = existing["id"]
+        conn.execute("UPDATE inventory SET stock_quantity = ?, wait_time_minutes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (quantity, wait_time_minutes, iid))
+    else:
+        iid = str(uuid.uuid4())
+        conn.execute(
+            "INSERT INTO inventory (id, business_id, item_name, stock_quantity, wait_time_minutes) VALUES (?, ?, ?, ?, ?)",
+            (iid, business_id, item_name, quantity, wait_time_minutes)
+        )
+    conn.commit()
+    row = conn.execute("SELECT * FROM inventory WHERE id = ?", (iid,)).fetchone()
+    conn.close()
+    return _row_to_dict(row)
+
+def check_inventory(business_id: str, item_name: str) -> Optional[Dict]:
+    conn = get_db()
+    # Case-insensitive partial match
+    row = conn.execute("SELECT * FROM inventory WHERE business_id = ? AND item_name LIKE ?", (business_id, f"%{item_name}%")).fetchone()
+    conn.close()
+    return _row_to_dict(row)
+
+def update_inventory_stock(business_id: str, item_name: str, delta: int) -> bool:
+    conn = get_db()
+    row = conn.execute("SELECT id, stock_quantity FROM inventory WHERE business_id = ? AND item_name LIKE ?", (business_id, f"%{item_name}%")).fetchone()
+    if not row:
+        conn.close()
+        return False
+    
+    new_quantity = max(0, row["stock_quantity"] + delta)
+    conn.execute("UPDATE inventory SET stock_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (new_quantity, row["id"]))
+    conn.commit()
+    conn.close()
+    return True
 
 # --------------------------------------------------------------------------- #
 #  Orders
